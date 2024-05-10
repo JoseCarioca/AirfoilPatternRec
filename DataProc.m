@@ -57,6 +57,7 @@ for cvIt = 1:10
     TOTAL_GLM{cvIt} = {glm_perc, p};
 
     TOTAL_CENTROIDS{cvIt} = K_MEANS_PROC(training_x, training_y, test_x, test_y, K_CENTROIDS);
+    disp(cvIt); 
 end
 
 

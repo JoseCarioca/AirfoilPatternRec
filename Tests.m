@@ -4,7 +4,7 @@ load("PROCESSED_WEIGHTS.mat");
 
 K_CENTROIDS     = 11;
 
-addpath("../../pattern/");
+addpath("pattern\");
 
 directory       = "./harth";
 files           = dir(directory);

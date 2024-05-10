@@ -1,7 +1,7 @@
 clear all, close all, clc;
-addpath("../../pattern/");
+addpath("pattern\");
 
-directory       = "./harth";
+directory       = "./harth12";
 files           = dir(directory);
 
 total_table = table();
@@ -23,4 +23,4 @@ for f = 3:length(files)
 
 end
 
-writetable(total_table, "ALL_FILES.csv");
+writetable(total_table, "ALL_FILES12.csv");
