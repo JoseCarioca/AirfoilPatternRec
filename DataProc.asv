@@ -1,7 +1,7 @@
 clear all, close all, clc;
-addpath("pattern\");
+addpath("pattern");
 
-directory       = "./harth12";
+directory       = "./harth";
 files           = dir(directory);
 TOTAL_CENTROIDS = cell(length(files) -2, 10);
 K_CENTROIDS     = 11;
@@ -22,7 +22,7 @@ K_CENTROIDS     = 11;
 
 %% Procesamos 
 
-data = readtable("ALL_FILES12.csv");
+data = readtable("ALL_FILES.csv");
 
 dat = table2array(data(:, :));
 dat = dat(randperm(length(dat)), :);
@@ -60,10 +60,10 @@ for cvIt = 1:10
 end
 
 %eliminando dataset del struct
-%TOTAL_LDA_COMPACT = cell(10,2);
+TOTAL_LDA_COMPACT = cell(10,2);
 for c = 1:10
     TOTAL_LDA_COMPACT{c}{1} = TOTAL_LDA{c}{1};
     TOTAL_LDA_COMPACT{c}{2} = compact(TOTAL_LDA{c}{2});
 end
 
-save("PROCESSED_WEIGHTS12.mat", "TOTAL_CENTROIDS", "TOTAL_GLM", "TOTAL_LDA_COMPACT");
+save("PROCESSED_WEIGHTS.mat", "TOTAL_CENTROIDS", "TOTAL_GLM", "TOTAL_LDA_COMPACT");
