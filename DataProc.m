@@ -38,7 +38,7 @@ x(:, :) = normalize(x(:, :));
 
 %% Discriminante lineal
 %  Nos olvidamos de las caracteristicas menos utiles
-lda = fisher( x, y, 7 );
+lda = fisher( x, y, 3 );
 x = lda * x;
 
 PredictMatlab = zeros(1, 10);
@@ -49,24 +49,24 @@ for cvIt = 1:10
     [training_x, test_x, training_y, test_y] = crossval(x, y, 10, cvIt );
 
     % Create a LinearDiscriminantAnalysis object
-    % lda    = fitcdiscr(training_x', training_y', 'OptimizeHyperparameters','auto',...
-    % 'HyperparameterOptimizationOptions',...
-    % struct('AcquisitionFunctionName','expected-improvement-plus'));
-    % y_pred = predict(lda, test_x')';
-    % 
-    % aciertos   = find(y_pred == test_y);
-    % lda_perc   = (size(aciertos, 2) / size(test_y, 2) ) * 100;  
+     lda    = fitcdiscr(training_x', training_y', 'OptimizeHyperparameters','auto',...
+     'HyperparameterOptimizationOptions',...
+     struct('AcquisitionFunctionName','expected-improvement-plus'));
+     y_pred = predict(lda, test_x')';
+     
+     aciertos   = find(y_pred == test_y);
+     lda_perc   = (size(aciertos, 2) / size(test_y, 2) ) * 100;  
 
-    %PredictMatlab(1, cvIt) = lda_perc;
+    PredictMatlab(1, cvIt) = lda_perc;
     
     [glm_perc, p] = GLM(training_x, training_y, test_x, test_y);
 
     PredictGLM(1, cvIt) = glm_perc;
 
-    %centroides = K_MEANS_PROC(training_x, training_y, test_x, test_y, K_CENTROIDS);
+    centroides = K_MEANS_PROC(training_x, training_y, test_x, test_y, K_CENTROIDS);
 
-    %PredictKMeans(1, cvIt) = centroides{1};
+    PredictKMeans(1, cvIt) = centroides{1};
 
 end
 
-%save("AciertosModelos.mat", "PredictMatlab", "PredictGLM", "PredictKMeans");
+save("AciertosModelos.mat", "PredictMatlab", "PredictGLM", "PredictKMeans");
