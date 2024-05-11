@@ -40,11 +40,14 @@ x(:, :) = normalize(x(:, :));
 
 %classes = 6; %number of classes
 [x,y] = shuffle(x,y);
-nErrEuc = 0; nErrManh = 0; nErrMahal = 0;
-classes = unique(y);
-nclasses = length(classes);
-Confmat_manh = zeros(nclasses,nclasses);
-Confmat_euc = zeros(nclasses,nclasses);
+
+nErrEuc       = 0; 
+nErrManh      = 0; 
+nErrMahal     = 0;
+classes       = unique(y);
+nclasses      = length(classes);
+Confmat_manh  = zeros(nclasses,nclasses);
+Confmat_euc   = zeros(nclasses,nclasses);
 Confmat_mahal = zeros(nclasses,nclasses);
 for k =1:10
     [xtrn,xtst,ytrn,ytst] = crossval(x,y,10,k);

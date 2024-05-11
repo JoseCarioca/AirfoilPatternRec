@@ -4,10 +4,26 @@ function [porcentaje,p] = GLM(training_x, training_y, test_x, test_y)
         maped_label = find(current_labels == training_y(1, i));
         training_y(1, i) = maped_label;
     end
-    A = [training_x(3, :)' training_x(2, :)' training_x(1, :)' ones(size(training_x, 2), 1)];
+
+    A = ones(size(training_x, 2), size(training_x, 1) + 1);
+    j = size(test_x, 1);
+    for i = 1:size(training_x, 1)
+        A(:, i) = training_x(j, :);
+        j = j - 1;
+    end
+    %A = [training_x(3, :)' training_x(2, :)' training_x(1, :)' ones(size(training_x, 2), 1)];
     p = pinv(A) * training_y';
 
-    y_pred = test_x(3, :) .* p(1) + test_x(2, :) .* p(2) + test_x(1, :) .* p(3) + p(4);
+    %y_pred = test_x(3, :) .* p(1) + test_x(2, :) .* p(2) + test_x(1, :) .* p(3) + p(4);
+
+    y_pred = zeros(size(test_y));
+    j = size(test_x, 1);
+    for i = 1:size(test_x, 1)
+        y_pred = y_pred + test_x(j, :) .* p(i);
+        j = j - 1;
+    end
+
+    y_pred = y_pred + p(end);
 
     y_pred = round(y_pred);
 
