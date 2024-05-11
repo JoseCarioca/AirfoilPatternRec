@@ -1,5 +1,5 @@
 clear all, close all, clc;
-addpath("pattern");
+addpath("pattern\");
 
 directory       = "./harth";
 files           = dir(directory);
@@ -22,7 +22,7 @@ K_CENTROIDS     = 11;
 
 %% Procesamos 
 
-data = readtable("ALL_FILES.csv");
+data = readtable("ALL_FILES12.csv");
 
 dat = table2array(data(:, :));
 dat = dat(randperm(length(dat)), :);
@@ -38,32 +38,40 @@ x(:, :) = normalize(x(:, :));
 lda = fisher( x, y, 3 );
 
 x = lda * x;
-
-for cvIt = 1:10
-    [training_x, test_x, training_y, test_y] = crossval(x, y, 10, cvIt );
-
-    % Create a LinearDiscriminantAnalysis object
-    lda    = fitcdiscr(training_x', training_y');
-    y_pred = predict(lda, test_x')';
-
-    aciertos   = find(y_pred == test_y);
-    lda_perc   = (size(aciertos, 2) / size(test_y, 2) ) * 100;  
-
-    TOTAL_LDA{cvIt} = {lda_perc, lda};
+for numCentroides = 1:10
+    for cvIt = 1:10
+        [training_x, test_x, training_y, test_y] = crossval(x, y, 10, cvIt );
     
-    [glm_perc, p] = GLM(training_x, training_y, test_x, test_y);
+        % Create a LinearDiscriminantAnalysis object
+        lda    = fitcdiscr(training_x', training_y');
+        y_pred = predict(lda, test_x')';
+    
+        aciertos   = find(y_pred == test_y);
+        lda_perc   = (size(aciertos, 2) / size(test_y, 2) ) * 100;  
+    
+        TOTAL_LDA{cvIt} = {lda_perc, lda};
+        
+        [glm_perc, p] = GLM(training_x, training_y, test_x, test_y);
+    
+        %TOTAL_GLM{cvIt} = {glm_perc, p};
+    
+        TOTAL_CENTROIDS{cvIt} = K_MEANS_PROC(training_x, training_y, test_x, test_y, K_CENTROIDS);
+        disp(cvIt); 
+    end
+    for c = 1:10
+        TOTAL_LDA_COMPACT12{c*numCentroides}{1} = TOTAL_LDA{c}{1};
+        TOTAL_LDA_COMPACT12{c*numCentroides}{2} = compact(TOTAL_LDA{c}{2});
+    end
 
-    TOTAL_GLM{cvIt} = {glm_perc, p};
-
-    TOTAL_CENTROIDS{cvIt} = K_MEANS_PROC(training_x, training_y, test_x, test_y, K_CENTROIDS);
-    disp(cvIt); 
 end
 
 %eliminando dataset del struct
-TOTAL_LDA_COMPACT = cell(10,2);
-for c = 1:10
-    TOTAL_LDA_COMPACT{c}{1} = TOTAL_LDA{c}{1};
-    TOTAL_LDA_COMPACT{c}{2} = compact(TOTAL_LDA{c}{2});
-end
+%TOTAL_LDA_COMPACT = cell(10,2);
+for c = 1:100
+   plot(TOTAL_LDA_COMPACT12{c}{1}); hold on;
+   %TOTAL_LDA_COMPACT12{c}{1} = TOTAL_LDA{c}{1};
+   %TOTAL_LDA_COMPACT12{c}{2} = compact(TOTAL_LDA{c}{2});
+end 
+hold off;
 
-save("PROCESSED_WEIGHTS.mat", "TOTAL_CENTROIDS", "TOTAL_GLM", "TOTAL_LDA_COMPACT");
+save("PROCESSED_WEIGHTS12_K1_K10.mat", "TOTAL_CENTROIDS", "TOTAL_LDA_COMPACT");
