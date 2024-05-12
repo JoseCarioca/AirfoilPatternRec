@@ -24,3 +24,4 @@ for f = 3:length(files)
 end
 
 writetable(total_table, "ALL_FILES12.csv");
+

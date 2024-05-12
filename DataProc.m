@@ -1,11 +1,12 @@
-clear all, close all, clc;
+clearvars -except data
+, close all, clc;
 addpath("pattern\");
 
 directory       = "./harth";
 files           = dir(directory);
 TOTAL_CENTROIDS = cell(length(files) -2, 10);
 K_CENTROIDS     = 11;
-
+addvelocity = true;
 %% Labels
 % 1: walking	
 % 2: running	
@@ -25,21 +26,29 @@ K_CENTROIDS     = 11;
 data = readtable("ALL_FILES12.csv");
 
 dat = table2array(data(:, :));
-dat = dat(randperm(length(dat)), :);
+%dat = dat(randperm(length(dat)), :);
 x = dat(:, 1:7)';
 y = dat(:, 8)';
 y(y==140) = 13;
 y(y==130) = 13;
 y(y==14)  = 13;
 y(y==5)   = 4;
+
+
+if addvelocity % bloque para añadir 6 caracteristicas más: la velocidad inmediata de cada punto
+    aux0 = [zeros(size(x,1)-1,1) x(2:end,1:end-1)];
+    vel = [x ; (x(2:end,:) - aux0)];
+    x = vel;
+end
 % Normalizar (parece que pierde demasiada precision)
 x(:, :) = normalize(x(:, :));
-
+[x, y] = shuffle(x,y);
 lda = fisher( x, y, 3 );
 
 x = lda * x;
-for numCentroides = 1:5
-    for cvIt = 1:3
+maxcvIt = 5;
+for numCentroides = 1:10
+    for cvIt = 1:maxcvIt
         [training_x, test_x, training_y, test_y] = crossval(x, y, 10, cvIt );
     
         % Create a LinearDiscriminantAnalysis object
@@ -53,14 +62,14 @@ for numCentroides = 1:5
         
         [glm_perc, p] = GLM(training_x, training_y, test_x, test_y);
     
-        %TOTAL_GLM{cvIt} = {glm_perc, p};
+        TOTAL_GLM{cvIt} = {glm_perc, p};
     
         %TOTAL_CENTROIDS{cvIt} = K_MEANS_PROCMAHAL(training_x, training_y, test_x, test_y, K_CENTROIDS);
-        TOTAL_CENTROIDS{cvIt} = K_MEANS_PROC_MAHAL(training_x, training_y, test_x, test_y, numCentroides);
+        TOTAL_CENTROIDS{cvIt} = K_MEANS_PROC(training_x, training_y, test_x, test_y, numCentroides);
 
         disp(cvIt); 
-        TOTAL_LDA_COMPACT12{cvIt*numCentroides}{1} = TOTAL_LDA{cvIt}{1};
-        TOTAL_LDA_COMPACT12{cvIt*numCentroides}{2} = compact(TOTAL_LDA{cvIt}{2});
+        TOTAL_LDA_COMPACT12{(numCentroides-1)*maxcvIt+cvIt}{1} = TOTAL_LDA{cvIt}{1};
+        TOTAL_LDA_COMPACT12{(numCentroides-1)*maxcvIt+cvIt}{2} = compact(TOTAL_LDA{cvIt}{2});
     end
     for c = 1:10
         %TOTAL_LDA_COMPACT12{c*numCentroides}{1} = TOTAL_LDA{c}{1};
@@ -71,12 +80,14 @@ end
 
 %eliminando dataset del struct
 %TOTAL_LDA_COMPACT = cell(10,2);
-for c = 1:100
+porcentaje = zeros(10,maxcvIt);
+for c = 1:length( TOTAL_LDA_COMPACT12)
    porcentaje(c) = TOTAL_LDA_COMPACT12{c}{1}; 
    %TOTAL_LDA_COMPACT12{c}{1} = TOTAL_LDA{c}{1};
    %TOTAL_LDA_COMPACT12{c}{2} = compact(TOTAL_LDA{c}{2});
 end 
+
 plot(porcentaje); hold on;
 hold off;
 
-save("PROCESSED_WEIGHTS12_MAHAL3_5.mat", "TOTAL_CENTROIDS", "TOTAL_LDA_COMPACT12");
+save("PROCESSED_WEIGHTS12_VELOCITYFISHER2.mat", "TOTAL_CENTROIDS","TOTAL_GLM", "TOTAL_LDA_COMPACT12");
