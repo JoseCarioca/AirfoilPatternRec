@@ -1,9 +1,9 @@
 
-clc, clear all
+clc, clearvars -except dat data
 addpath("pattern")
 data = readtable("ALL_FILES12.csv");
 
-fin = 600000;
+fin = size(data,1);
 
 directory       = "./harth12";
 files           = dir(directory);
@@ -28,15 +28,73 @@ K_CENTROIDS     = 11;
 %data = readtable("ALL_FILES12.csv");
 
 dat = table2array(data(1:fin, :));
-dat = dat(randperm(length(dat)), :);
+%dat = dat(randperm(length(dat)), :);
 x = dat(:, 1:7)';
 y = dat(:, 8)';
-y(y==140) = 13;
-y(y==130) = 13;
-y(y==14)  = 13;
 y(y==5)   = 4;
+y(y==13) = 5;
+y(y==140) = 5; 
+y(y==130) = 5;
+y(y==14)  = 5;
+
+%% NEW Labels
+% 1: walking	
+% 2: running	
+% 3: shuffling
+% 4: stairs (ascending)	& stairs (descending)	
+% 5: cycling (sit)	& cycling (stand) cycling (sit, inactive) & cycling (stand, inactive)
+% 6: standing	
+% 7: sitting	
+% 8: lying	
+
 % Normalizar (parece que pierde demasiada precision)
+%%  mezclamos y agarramos la mitad de los datos de training y mitad de test (cambiar con CROSSVAL)
 x(:, :) = normalize(x(:, :));
+[x, y] = shuffle(x, y);
+%x_tr = x(1:size(x,1)/2,:); y_tr =  y(1:size(x,1)/2,:); %primera mitad de los datos
+%x_ts = x(size(x,1)/2+1:end,:); y_ts = y(size(x,1)/2+1:end,:); %sumar 1 a las clases para iterar en ellas
+%x_tr = x(:,1:size(x,2)/2); y_tr =  y(:,1:size(x,2)/2); %primera mitad de los datos
+%x_ts = x(:,size(x,2)/2+1:end); y_ts = y(:,size(x,2)/2+1:end); %sumar 1 a las clases para iterar en ellas
+
+%% . Mahalannobis 
+K = 8;
+aciertos = zeros(1,K); % %aciertos
+clases = unique(y);
+nclases = length(clases);
+aciertos_mahal = zeros(1,K); % %aciertos
+lda = fisher( x, y, 3 );
+
+x = lda * x;
+TOTAL_ACIERTOS = zeros(K,10);
+for k = 1:K
+    for cvIt = 1:10
+        [training_x, test_x, training_y, test_y] = crossval(x, y, 10, cvIt );
+        centroides = zeros(size(training_x,1),k*nclases); %k centroides por cada clase
+        %rango de centroides (i-1)*k+1 : i*k
+        centr_pertenece = sort(repmat(1:nclases, 1, k)); %pertenencia a cada clase
+    
+        for i = clases % de 1 a 8
+            x_clase = training_x(:,find(training_y == i));
+            centroides(:,(i-1)*k+1:i*k) = kmeans(x_clase,k);
+            covarianza{i} = covpat(x_clase);
+        end
+    
+        for j=1:k*nclases %num total de centroides otra forma size2 centroides
+          distMah(j,1:length(test_x)) = d_mahal(test_x,centroides(:,j),covarianza{centr_pertenece(j)});  
+          %centr_pertenece(j) devuelve a qué clase pertenece el calculo y por
+          %tanto qué covarianza usar
+        end
+    
+        [~,c] = min(distMah); %c te dice el numero de centroide 
+        c_pert = centr_pertenece(c); % c_pert es a qué clase pertenece ese centroide y lo que nos interesa
+        aciertos_mahal(cvIt) = (length(find(c_pert(1:length(test_y)) == test_y))/length(test_y))*100; 
+        %testx.size != testy.size a veces
+    end
+    TOTAL_ACIERTOS(k,:) = aciertos_mahal;
+    figure(k),
+    plot(aciertos_mahal); %legend(cvIt);
+end
+  
 
 %classes = 6; %number of classes
 [x,y] = shuffle(x,y);
