@@ -1,39 +1,27 @@
 
-function [TOTAL_CENTROIDS] = K_MEANS_PROC_MAHAL(training_x,training_y, test_x, test_y, K_CENTROIDS)
- %% Utilizar cross validation
-    current_labels = unique(training_y);
-    c   = {length(current_labels)};
-    cov = {length(current_labels)};
-    for i = 1:length(current_labels)
-        c{i}   = {current_labels(i),kmeans(training_x(:, training_y == current_labels(i)), K_CENTROIDS)};
-        cov{i} = covpat(training_x(:, training_y == current_labels(i)));
+function [TOTAL_CENTROIDS] = K_MEANS_PROC_MAHAL(training_x,training_y, test_x, test_y, k, clases)
+    nclases = length(clases);
+    centroides = zeros(size(training_x,1),k*nclases); %k centroides por cada clase
+    %rango de centroides (i-1)*k+1 : i*k
+    centr_pertenece = sort(repmat(1:nclases, 1, k)); %pertenencia a cada clase
+
+    for i = clases % de 1 a 8
+        x_clase = training_x(:,find(training_y == i));
+        centroides(:,(i-1)*k+1:i*k) = kmeans(x_clase,k);
+        covarianza{i} = covpat(x_clase);
     end
 
-    valoresCentroides = 1:length(current_labels)*K_CENTROIDS;
+    for j=1:k*nclases %num total de centroides otra forma size2 centroides
+      distMah(j,1:length(test_x)) = d_mahal(test_x,centroides(:,j),covarianza{centr_pertenece(j)});  
+      %centr_pertenece(j) devuelve a qué clase pertenece el calculo y por
+      %tanto qué covarianza usar
+    end
 
-    j = 1;
-    for row = 1:length(valoresCentroides)
-        valoresCentroides(row) = c{j}{1};
-        if mod(row, K_CENTROIDS) == 0
-            j = j + 1;
-        end
-    end
-    %% Procesar clasificacion
-    centroides = [];
-    for row = 1:length(c)
-        centroides = [centroides c{row}{2}];
-    end
-    yest = zeros(1, size(test_y, 2));
-    for i = 1:length(test_y)
-        %d = d_euclid(test_x(:, i), centroides);
-        d = d_mahal(test_x(:,i), centroides, cov{i});
-        [~,pos] = sort(d); % Aqui se encuentra la posicion de menor distancia
-        yest(i) = valoresCentroides(pos(1));
-    end
-    acierto      = (find(yest == test_y));
-    aciertos_mah = (size(acierto, 2) / size(test_y, 2)) * 100;
-    %disp(c)
-    disp(aciertos_mah)
-    TOTAL_CENTROIDS = {aciertos_mah, centroides};
+    [~,c] = min(distMah); %c te dice el numero de centroide 
+    c_pert = centr_pertenece(c); % c_pert es a qué clase pertenece ese centroide y lo que nos interesa
+    aciertos_mahal(cvIt) = (length(find(c_pert(1:length(test_y)) == test_y))/length(test_y))*100; 
+    %testx.size != testy.size a veces
+    TOTAL_CENTROIDS = {aciertos_mah, c};
 end
+
 

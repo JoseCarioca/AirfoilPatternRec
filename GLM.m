@@ -6,7 +6,7 @@ function [porcentaje,p] = GLM(training_x, training_y, test_x, test_y)
     end
 
     A = ones(size(training_x, 2), size(training_x, 1) + 1);
-    j = size(test_x, 1);
+    j = size(training_x, 1);
     for i = 1:size(training_x, 1)
         A(:, i) = training_x(j, :);
         j = j - 1;
