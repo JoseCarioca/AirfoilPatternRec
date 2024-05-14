@@ -50,15 +50,16 @@ pca_transform = pca(unique_chord_data([2 5], :), 1);
 x(5, :) = pca_transform * unique_chord_data([2 5], :);
 x(6, :) = unique_chord_data(7, :); %new input in dB
 y = unique_chord_data(6, :); %output SSPL
-
 corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
 disp(corr_table);
 
 % Create heatmap
-xtitle = {'f' 'alpha' 'c' 'U' 'delta' 'Sr' 'SSPL'};
-%% alpha y delta estan transformados... ver el significado y editar mapa acorde
-heatmap(xtitle,xtitle,corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
+heatmap(corr_table, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none');
+
+% Add title and axis labels
 title('Mapa de correlacion');
+xlabel('Columns');
+ylabel('f alpha c U delta Sr SSPL');
 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
