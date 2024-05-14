@@ -45,10 +45,10 @@ end
 
 CV = 10;
 
-x = unique_chord_data(1:4, :);
+x = unique_chord_data(1:5, :);
 pca_transform = pca(unique_chord_data([2 5], :), 1);
-x(5, :) = pca_transform * unique_chord_data([2 5], :);
-x(6, :) = unique_chord_data(7, :);
+x(6, :) = pca_transform * unique_chord_data([2 5], :);
+x(7, :) = unique_chord_data(7, :);
 y = unique_chord_data(6, :);
 
 for i=1:CV
@@ -61,19 +61,55 @@ for i=1:CV
     %     j = j - 1;
     % end
     
-    A = [ (tr_x(6, :)').^5 tr_x(4, :)'.^4 tr_x(3, :)'.^3 (tr_x(5, :)') tr_x(1, :)' ones(size(tr_x, 2), 1)];
+    A = [ (tr_x(7, :)').^4 tr_x(4, :)'.^3 tr_x(3, :)'.^2 tr_x(1, :)' (tr_x(5, :)').^2 (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
 
     p = pinv(A) * tr_y';
 
-    y_pred = ts_x(6, :).^5 .* p(1) + ts_x(4, :).^4 .* p(2) + ts_x(3, :) .^ 3 .* p(3) + ts_x(5, :) .* p(4) + ts_x(1, :) .* p(5) + p(6);
-    figure;
-    screen_size = get(0, 'ScreenSize');
-    set(gcf, 'Position', screen_size);
-    plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
-    xlabel("Frequency"); ylabel("SSPL");
-    legend('Test', 'Prediction');hold off;
-    print("RegressionIt"+i+".png", '-dpng', '-r300')
+    y_pred = ts_x(7, :).^4 .* p(1) + ts_x(4, :).^3 .* p(2) + ts_x(3, :) .^2 .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :).^2 .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
 
+    disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
+
+    if 1
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');hold off;
+        print("RegressionIt"+i+".png", '-dpng', '-r300')
+    end
+
+    lda = fitcdiscr([(tr_x(7, :)').^4 tr_x(4, :)'.^3 tr_x(3, :)'.^2 tr_x(1, :)' (tr_x(5, :)').^2 (tr_x(6, :)') (tr_x(2, :)')], tr_y');
+    lda_pred = predict(lda, [(ts_x(7, :)').^4 ts_x(4, :)'.^3 ts_x(3, :)'.^2 ts_x(1, :)' (ts_x(6, :)').^2 ])';
+
+    disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
+
+    if 1
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(lda_pred, 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');hold off;
+        print("LDAIt"+i+".png", '-dpng', '-r300')
+    end
+    
+    pp     = fitlm([ (tr_x(7, :)').^4 tr_x(4, :)'.^3 tr_x(3, :)'.^2 tr_x(1, :)' (tr_x(6, :)').^2 ], tr_y','RobustOpts','on');
+   
+    p_pred = predict(pp,  [(ts_x(7, :)').^4 ts_x(4, :)'.^3 ts_x(3, :)'.^2 ts_x(1, :)' (ts_x(6, :)').^2 ]);
+
+    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+
+    if 1
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');hold off;
+        print("PolyFitIt"+i+".png", '-dpng', '-r300')
+    end
+        
     % ts_unique_chord      = unique(ts_x(3, :));
     % ts_unique_chord_data = [];
     % ts_unique_chord = sort(ts_unique_chord);
