@@ -51,7 +51,7 @@ for it = 1:size(unique_chord_data, 2)
         a_d = 1;
     end
     % unique_chord_data(7, it) = -10 .* log10((v_d/100).^5 .* ((f_d .* c_d)./v_d));
-    Re = (rho * v_d * c_d) / mu;
+    % Re = (rho * v_d * c_d) / mu;
     M = v_d / c_air;
     St = (f_d * c_d) / v_d;
     SPL = 10 * log10(USSF(f_d, St) * (v_d / c_air) * (c_d / s_d));
@@ -92,6 +92,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("RegressionIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-y_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("residualsRegIt"+i+".png", '-dpng', '-r300')
     end
 
     lda = fitcdiscr( tr_x', tr_y');
@@ -107,9 +115,17 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("LDAIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-lda_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resLDAIt"+i+".png", '-dpng', '-r300')
     end
 
-    pp     = fitlm(tr_x', tr_y', '');
+    pp     = fitlm(tr_x', tr_y', 'quadratic');
 
     p_pred = predict(pp,  ts_x');
 
@@ -123,6 +139,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("PolyFitIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-p_pred', 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resfitlmIt"+i+".png", '-dpng', '-r300')
     end
         
     % ts_unique_chord      = unique(ts_x(3, :));
@@ -153,4 +177,6 @@ for i=1:CV
     %     end
     % end
 end
+
+
 

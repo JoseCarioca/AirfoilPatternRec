@@ -84,7 +84,7 @@ for i=1:CV
 
     disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
 
-    if 1
+    if 0
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -92,6 +92,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("RegressionIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-y_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("residualsRegIt"+i+".png", '-dpng', '-r300')
     end
 
     lda = fitcdiscr( tr_x', tr_y');
@@ -99,7 +107,7 @@ for i=1:CV
 
     disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
 
-    if 1
+    if 0
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -107,6 +115,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("LDAIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-lda_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resLDAIt"+i+".png", '-dpng', '-r300')
     end
 
     pp     = fitlm(tr_x', tr_y', 'quadratic');
@@ -123,6 +139,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("PolyFitIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-p_pred', 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resfitlmIt"+i+".png", '-dpng', '-r300')
     end
         
     % ts_unique_chord      = unique(ts_x(3, :));
@@ -153,4 +177,6 @@ for i=1:CV
     %     end
     % end
 end
+
+
 
