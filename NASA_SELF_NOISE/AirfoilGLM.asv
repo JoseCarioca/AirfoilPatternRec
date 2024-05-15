@@ -36,11 +36,26 @@ end
 
 %% Aplicamos strouhal 
 %  Con esto podemos aproximar un SSPL
+% Fluid properties (for air at standard conditions)
+rho = 1.225; % kg/m^3 (density of air)
+mu = 1.81e-5; % Pa.s (dynamic viscosity of air)
+c_air = 343; % m/s (speed of sound in air at 20 degrees Celsius)
+USSF = @(f, St) (1 / f) * (f / St)^(-5/3) * (1 - exp(-f / St));
 for it = 1:size(unique_chord_data, 2)
     f_d = unique_chord_data(1, it);
     c_d = unique_chord_data(3, it);
     v_d = unique_chord_data(4, it);
-    unique_chord_data(7, it)=  -10 .* log((v_d/100).^5 .* ((f_d .* c_d)./v_d));
+    a_d = unique_chord_data(2, it);
+    s_d = unique_chord_data(5, it);
+    if a_d <= 0
+        a_d = 1;
+    end
+    % unique_chord_data(7, it) = -10 .* log10((v_d/100).^5 .* ((f_d .* c_d)./v_d));
+    Re = (rho * v_d * c_d) / mu;
+    M = v_d / c_air;
+    St = (f_d * c_d) / v_d;
+    SPL = 10 * log10(USSF(f_d, St) * (v_d / c_air) * (c_d / s_d));
+    unique_chord_data(7, it) = SPL - 10 .* log10((v_d/100).^5 .* ((f_d .* c_d)/s_d.^2));
 end
 
 CV = 10;
@@ -61,11 +76,11 @@ for i=1:CV
     %     j = j - 1;
     % end
     
-    A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)'.^2 tr_x(1, :)'.^3 (tr_x(5, :)') (tr_x(6, :)') log((tr_x(2, :)').^0.8 ones(size(tr_x, 2), 1)];
+    A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
 
     p = pinv(A) * tr_y';
 
-    y_pred = ts_x(7, :).* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .^2 .* p(3) + ts_x(1, :).^3 .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :).^0.8 .* p(7) + p(8);
+    y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
 
     disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
 
@@ -79,8 +94,8 @@ for i=1:CV
         print("RegressionIt"+i+".png", '-dpng', '-r300')
     end
 
-    lda = fitcdiscr([(tr_x(7, :)').^4 tr_x(4, :)'.^3 tr_x(3, :)'.^2 tr_x(1, :)' (tr_x(5, :)').^2 (tr_x(6, :)') (tr_x(2, :)')], tr_y');
-    lda_pred = predict(lda,  [(ts_x(7, :)').^4 ts_x(4, :)'.^3 ts_x(3, :)'.^2 ts_x(1, :)' (ts_x(6, :)').^2 ])';
+    lda = fitcdiscr( tr_x', tr_y');
+    lda_pred = predict(lda, ts_x')';
 
     disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
 
@@ -93,10 +108,10 @@ for i=1:CV
         legend('Test', 'Prediction');hold off;
         print("LDAIt"+i+".png", '-dpng', '-r300')
     end
-    
-    pp     = fitlm([ (tr_x(7, :)').^4 tr_x(4, :)'.^3 tr_x(3, :)'.^2 tr_x(1, :)' (tr_x(6, :)').^2 ], tr_y','RobustOpts','on');
-   
-    p_pred = predict(pp,  [(ts_x(7, :)').^4 ts_x(4, :)'.^3 ts_x(3, :)'.^2 ts_x(1, :)' (ts_x(6, :)').^2 ]);
+
+    pp     = fitlm(tr_x', tr_y', '');
+
+    p_pred = predict(pp,  ts_x');
 
     disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
 
