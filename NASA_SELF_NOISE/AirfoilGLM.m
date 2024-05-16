@@ -31,9 +31,6 @@ end
 unique_angle    = unique(x(2, :));
 unique_velocity = unique(x(4, :));
 
-% Strouhal number
-% -10 .* log((unique_velocity(1)/100).^5 .* f_d .* chord)
-
 %% Poner a 1 si quieres sacar las imagenes y guardarlas
 if 0
     ShowFigures(unique_chord_data, unique_chord, unique_velocity, unique_angle);
@@ -55,8 +52,7 @@ for it = 1:size(unique_chord_data, 2)
     if a_d <= 0
         a_d = 1;
     end
-    % unique_chord_data(7, it) = -10 .* log10((v_d/100).^5 .* ((f_d .* c_d)./v_d));
-    % Re = (rho * v_d * c_d) / mu;
+
     M = v_d / c_air;
     St = (f_d * c_d) / v_d;
     SPL = 10 * log10(USSF(f_d, St) * (v_d / c_air) * (c_d / s_d));
@@ -75,39 +71,53 @@ corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
 disp(corr_table);
 
 % Create heatmap
-xtitle = {'f' 'alpha' 'c' 'U' 'delta' 'Sr' 'SSPL'};
-%% alpha y delta estan transformados... ver el significado y editar mapa acorde
+xtitle = {'Freq' 'Angle Attack' 'Chord Length' 'Velocity' 'Section Side Disp' 'Angle SSD Transform' 'SPL Form' 'SSPL'};
+% alpha y delta estan transformados... ver el significado y editar mapa acorde
 heatmap(xtitle,xtitle,corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
 title('Mapa de correlacion');
+
+%% Store errors and their coefficients:
+pinv_error_coefs = cell(1, CV);
+regr_error_coefs = cell(1, CV);
+fitl_error_coefs = cell(1, CV);
 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
     
-    % A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
-    % 
-    % p = pinv(A) * tr_y';
-    % 
-    % y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
-    % 
-    % disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
+    A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
 
-    % if 1
-    %     figure;
-    %     screen_size = get(0, 'ScreenSize');
-    %     set(gcf, 'Position', screen_size);
-    %     plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
-    %     xlabel("Frequency"); ylabel("SSPL");
-    %     legend('Test', 'Prediction');hold off;
-    %     print("RegressionIt"+i+".png", '-dpng', '-r300')
-    % end
+    p = pinv(A) * tr_y';
+
+    y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
+
+    pinv_err = MSE(ts_y, y_pred);
+
+    pinv_error_coefs{i} = {pinv_err, p};
+
+    disp("RMSE (Our PINV): " +  pinv_err);
+
+    if 1
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');hold off;
+        print("RegressionIt"+i+".png", '-dpng', '-r300')
+    end
 
     mdl    = regress(tr_y', tr_x', 0.1);
     r_pred = ts_x(1, :) .* mdl(1) + ts_x(2, :) .* mdl(2) + ts_x(3, :) .* mdl(3) + ts_x(4, :) .* mdl(4) + ts_x(5, :) .* mdl(5) + ts_x(6, :) .* mdl(6) + ts_x(7, :) .* mdl(7);
 
+    r_pred = (y_pred + r_pred) ./ 2;
 
-    disp("RMSE (Regress):" + MSE(ts_y, r_pred));
+    regress_err = MSE(ts_y, r_pred);
 
-    if 0
+    regr_error_coefs{i} = {regress_err, mdl};
+
+    disp("RMSE (Regress):" + regress_err);
+
+    if 1
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -116,28 +126,16 @@ for i=1:CV
         legend('Test', 'Prediction');hold off;
         print("RegressIt"+i+".png", '-dpng', '-r300')
     end
-
-    % pp     = fitlm(tr_x', tr_y', 'quadratic');
-    % 
-    % p_pred = predict(pp,  ts_x');
-    % 
-    % disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
-    % 
-    % if 1
-    %     figure;
-    %     screen_size = get(0, 'ScreenSize');
-    %     set(gcf, 'Position', screen_size);
-    %     plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
-    %     xlabel("Frequency"); ylabel("SSPL");
-    %     legend('Test', 'Prediction');hold off;
-    %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
-    % end
       
     pp     = fitlm(tr_x', tr_y', 'quadratic');
 
     p_pred = predict(pp,  ts_x');
 
-    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    fitlm_err = MSE(ts_y, p_pred');
+
+    fitl_error_coefs{i} = {fitlm_err, pp};
+
+    disp("RMSE (PolyFit): " + fitlm_err);
 
     if 1
         figure;
