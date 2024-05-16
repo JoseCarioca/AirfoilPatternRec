@@ -36,15 +36,19 @@ end
 
 %% Aplicamos strouhal 
 %  Con esto podemos aproximar un SSPL
+<<<<<<< HEAD
 % Fluid properties (for air at standard conditions)
 rho = 1.225; % kg/m^3 (density of air)
 mu = 1.81e-5; % Pa.s (dynamic viscosity of air)
 c_air = 343; % m/s (speed of sound in air at 20 degrees Celsius)
 USSF = @(f, St) (1 / f) * (f / St)^(-5/3) * (1 - exp(-f / St));
+=======
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
 for it = 1:size(unique_chord_data, 2)
     f_d = unique_chord_data(1, it);
     c_d = unique_chord_data(3, it);
     v_d = unique_chord_data(4, it);
+<<<<<<< HEAD
     a_d = unique_chord_data(2, it);
     s_d = unique_chord_data(5, it);
     if a_d <= 0
@@ -56,15 +60,36 @@ for it = 1:size(unique_chord_data, 2)
     St = (f_d * c_d) / v_d;
     SPL = 10 * log10(USSF(f_d, St) * (v_d / c_air) * (c_d / s_d));
     unique_chord_data(7, it) = SPL - 10 .* log10((v_d/100).^5 .* ((f_d .* c_d)/s_d.^2));
+=======
+    unique_chord_data(7, it)=  -10 .* log((v_d/100).^5 .* f_d .* c_d);
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
 end
 
 CV = 10;
 
+<<<<<<< HEAD
 x = unique_chord_data(1:5, :);
 pca_transform = pca(unique_chord_data([2 5], :), 1);
 x(6, :) = pca_transform * unique_chord_data([2 5], :);
 x(7, :) = unique_chord_data(7, :);
 y = unique_chord_data(6, :);
+=======
+x = unique_chord_data(1:4, :);
+pca_transform = pca(unique_chord_data([2 5], :), 1); 
+x(5, :) = pca_transform * unique_chord_data([2 5], :);
+x(6, :) = unique_chord_data(7, :); %new input in dB
+y = unique_chord_data(6, :); %output SSPL
+corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
+disp(corr_table);
+
+% Create heatmap
+heatmap(corr_table, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none');
+
+% Add title and axis labels
+title('Mapa de correlacion');
+xlabel('Columns');
+ylabel('f alpha c U delta Sr SSPL');
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
@@ -76,6 +101,7 @@ for i=1:CV
     %     j = j - 1;
     % end
     
+<<<<<<< HEAD
     A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
 
     p = pinv(A) * tr_y';
@@ -85,6 +111,18 @@ for i=1:CV
     disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
 
     if 1
+=======
+    A = [ (tr_x(6, :)').^5 tr_x(4, :)'.^4 tr_x(3, :)'.^3 (tr_x(5, :)') tr_x(1, :)' ones(size(tr_x, 2), 1)];
+    
+    p = pinv(A) * tr_y';
+
+    y_pred = ts_x(6, :).^5 .* p(1) + ts_x(4, :).^4 .* p(2) + ts_x(3, :) .^ 3 .* p(3) + ts_x(5, :) .* p(4) + ts_x(1, :) .* p(5) + p(6);
+
+    Er_abs(i) = mean(abs(ts_y - y_pred)); %sumatorio |e|
+    Er_rel(i) = Er_abs(i)/mean(ts_y);
+
+    if 0
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -93,6 +131,7 @@ for i=1:CV
         legend('Test', 'Prediction');hold off;
         print("RegressionIt"+i+".png", '-dpng', '-r300')
     end
+<<<<<<< HEAD
 
     %lda = fitcdiscr( tr_x', tr_y');
     %lda_pred = predict(lda, ts_x')';
@@ -129,6 +168,8 @@ for i=1:CV
     %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
     % end
         
+=======
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
     % ts_unique_chord      = unique(ts_x(3, :));
     % ts_unique_chord_data = [];
     % ts_unique_chord = sort(ts_unique_chord);
@@ -157,4 +198,9 @@ for i=1:CV
     %     end
     % end
 end
+<<<<<<< HEAD
 
+=======
+figure,
+plot(Er_rel*100); xlabel("iteration"); ylabel("Error relativo");
+>>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
