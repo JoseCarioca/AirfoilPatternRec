@@ -65,18 +65,11 @@ end
 
 CV = 10;
 
-<<<<<<< HEAD
 x = unique_chord_data(1:5, :);
 pca_transform = pca(unique_chord_data([2 5], :), 1);
 x(6, :) = pca_transform * unique_chord_data([2 5], :);
 x(7, :) = unique_chord_data(7, :);
 y = unique_chord_data(6, :);
-=======
-x = unique_chord_data(1:4, :);
-pca_transform = pca(unique_chord_data([2 5], :), 1); 
-x(5, :) = pca_transform * unique_chord_data([2 5], :);
-x(6, :) = unique_chord_data(7, :); %new input in dB
-y = unique_chord_data(6, :); %output SSPL
 
 corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
 disp(corr_table);
@@ -86,12 +79,10 @@ xtitle = {'f' 'alpha' 'c' 'U' 'delta' 'Sr' 'SSPL'};
 %% alpha y delta estan transformados... ver el significado y editar mapa acorde
 heatmap(xtitle,xtitle,corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
 title('Mapa de correlacion');
->>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
     
-<<<<<<< HEAD
     % A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
     % 
     % p = pinv(A) * tr_y';
@@ -116,7 +107,7 @@ for i=1:CV
 
     disp("RMSE (Regress):" + MSE(ts_y, r_pred));
 
-    if 1
+    if 0
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -141,27 +132,31 @@ for i=1:CV
     %     legend('Test', 'Prediction');hold off;
     %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
     % end
-        
-=======
-    A = [ (tr_x(6, :)').^5 tr_x(4, :)'.^4 tr_x(3, :)'.^3 (tr_x(5, :)') tr_x(1, :)' ones(size(tr_x, 2), 1)];
-    
-    p = pinv(A) * tr_y';
+      
+    pp     = fitlm(tr_x', tr_y', 'quadratic');
 
-    y_pred = ts_x(6, :).^5 .* p(1) + ts_x(4, :).^4 .* p(2) + ts_x(3, :) .^ 3 .* p(3) + ts_x(5, :) .* p(4) + ts_x(1, :) .* p(5) + p(6);
+    p_pred = predict(pp,  ts_x');
 
-    Er_abs(i) = mean(abs(ts_y - y_pred)); %sumatorio |e|
-    Er_rel(i) = Er_abs(i)/mean(ts_y);
+    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
 
-    if 0
+    if 1
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
+        plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
-        print("RegressionIt"+i+".png", '-dpng', '-r300')
+        print("PolyFitIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-p_pred', 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resfitlmIt"+i+".png", '-dpng', '-r300')
     end
->>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
+        
     % ts_unique_chord      = unique(ts_x(3, :));
     % ts_unique_chord_data = [];
     % ts_unique_chord = sort(ts_unique_chord);

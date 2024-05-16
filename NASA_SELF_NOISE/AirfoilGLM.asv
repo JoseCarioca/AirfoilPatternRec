@@ -130,6 +130,14 @@ for i=1:CV
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
         print("RegressionIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-y_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("residualsRegIt"+i+".png", '-dpng', '-r300')
     end
 <<<<<<< HEAD
 
@@ -149,6 +157,7 @@ for i=1:CV
         plot(ts_y, 'r'); hold on; plot(r_pred, 'b');
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
+<<<<<<< HEAD
         print("RegressIt"+i+".png", '-dpng', '-r300')
     end
 
@@ -167,6 +176,42 @@ for i=1:CV
     %     legend('Test', 'Prediction');hold off;
     %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
     % end
+=======
+        print("LDAIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-lda_pred, 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resLDAIt"+i+".png", '-dpng', '-r300')
+    end
+
+    pp     = fitlm(tr_x', tr_y', 'quadratic');
+
+    p_pred = predict(pp,  ts_x');
+
+    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+
+    if 1
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');hold off;
+        print("PolyFitIt"+i+".png", '-dpng', '-r300')
+
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y-p_pred', 'g');
+        xlabel("Frequency"); ylabel("Error");
+        legend('residuals');hold off;
+        print("resfitlmIt"+i+".png", '-dpng', '-r300')
+    end
+>>>>>>> origin/NASA_SELF_NOISE
         
 =======
 >>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
@@ -200,7 +245,12 @@ for i=1:CV
 end
 <<<<<<< HEAD
 
+<<<<<<< HEAD
 =======
 figure,
 plot(Er_rel*100); xlabel("iteration"); ylabel("Error relativo");
 >>>>>>> 3b56b7d1f5775b3d66d40120a4621d0a76c88bbe
+=======
+
+
+>>>>>>> origin/NASA_SELF_NOISE
