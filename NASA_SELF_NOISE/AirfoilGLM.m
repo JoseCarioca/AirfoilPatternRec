@@ -1,8 +1,14 @@
-clear all, close all, clc;
+clearvars -except data,
+close all, clc;
 
 addpath("./pattern");
 
 data = readtable("AirfoilSelfNoise.csv");
+
+correlacion = corrcoef(data{:,:});
+heatmap(data.Properties.VariableNames,data.Properties.VariableNames,correlacion);
+title('Correlation map of given data');
+print("CorrelationMap0.png", '-dpng', '-r300')
 
 %% Labels
 %  Frequency
