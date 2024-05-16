@@ -68,62 +68,56 @@ y = unique_chord_data(6, :);
 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
-
-    % A = ones(size(tr_x, 2), size(tr_x, 1) + 1);
-    % j = size(tr_x, 1);
-    % for ii = 1:size(tr_x, 1)
-    %     A(:, ii) = tr_x(j, :);
-    %     j = j - 1;
-    % end
     
-    A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
+    % A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
+    % 
+    % p = pinv(A) * tr_y';
+    % 
+    % y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
+    % 
+    % disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
 
-    p = pinv(A) * tr_y';
+    % if 1
+    %     figure;
+    %     screen_size = get(0, 'ScreenSize');
+    %     set(gcf, 'Position', screen_size);
+    %     plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
+    %     xlabel("Frequency"); ylabel("SSPL");
+    %     legend('Test', 'Prediction');hold off;
+    %     print("RegressionIt"+i+".png", '-dpng', '-r300')
+    % end
 
-    y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
+    mdl    = regress(tr_y', tr_x', 0.1);
+    r_pred = ts_x(1, :) .* mdl(1) + ts_x(2, :) .* mdl(2) + ts_x(3, :) .* mdl(3) + ts_x(4, :) .* mdl(4) + ts_x(5, :) .* mdl(5) + ts_x(6, :) .* mdl(6) + ts_x(7, :) .* mdl(7);
 
-    disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
 
-    if 1
-        figure;
-        screen_size = get(0, 'ScreenSize');
-        set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(y_pred, 'b');
-        xlabel("Frequency"); ylabel("SSPL");
-        legend('Test', 'Prediction');hold off;
-        print("RegressionIt"+i+".png", '-dpng', '-r300')
-    end
-
-    lda = fitcdiscr( tr_x', tr_y');
-    lda_pred = predict(lda, ts_x')';
-
-    disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
-
-    if 1
-        figure;
-        screen_size = get(0, 'ScreenSize');
-        set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(lda_pred, 'b');
-        xlabel("Frequency"); ylabel("SSPL");
-        legend('Test', 'Prediction');hold off;
-        print("LDAIt"+i+".png", '-dpng', '-r300')
-    end
-
-    pp     = fitlm(tr_x', tr_y', 'quadratic');
-
-    p_pred = predict(pp,  ts_x');
-
-    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    disp("RMSE (Regress):" + MSE(ts_y, r_pred));
 
     if 1
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+        plot(ts_y, 'r'); hold on; plot(r_pred, 'b');
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
-        print("PolyFitIt"+i+".png", '-dpng', '-r300')
+        print("RegressIt"+i+".png", '-dpng', '-r300')
     end
+
+    % pp     = fitlm(tr_x', tr_y', 'quadratic');
+    % 
+    % p_pred = predict(pp,  ts_x');
+    % 
+    % disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    % 
+    % if 1
+    %     figure;
+    %     screen_size = get(0, 'ScreenSize');
+    %     set(gcf, 'Position', screen_size);
+    %     plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+    %     xlabel("Frequency"); ylabel("SSPL");
+    %     legend('Test', 'Prediction');hold off;
+    %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
+    % end
         
     % ts_unique_chord      = unique(ts_x(3, :));
     % ts_unique_chord_data = [];

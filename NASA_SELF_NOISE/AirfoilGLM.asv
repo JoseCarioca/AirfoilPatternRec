@@ -51,7 +51,7 @@ for it = 1:size(unique_chord_data, 2)
         a_d = 1;
     end
     % unique_chord_data(7, it) = -10 .* log10((v_d/100).^5 .* ((f_d .* c_d)./v_d));
-    Re = (rho * v_d * c_d) / mu;
+    % Re = (rho * v_d * c_d) / mu;
     M = v_d / c_air;
     St = (f_d * c_d) / v_d;
     SPL = 10 * log10(USSF(f_d, St) * (v_d / c_air) * (c_d / s_d));
@@ -94,36 +94,40 @@ for i=1:CV
         print("RegressionIt"+i+".png", '-dpng', '-r300')
     end
 
-    lda = fitcdiscr( tr_x', tr_y');
-    lda_pred = predict(lda, ts_x')';
+    %lda = fitcdiscr( tr_x', tr_y');
+    %lda_pred = predict(lda, ts_x')';
 
-    disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
+    mdl    = regress(tr_y', tr_x', 0.1);
+    r_pred = ts_x(1, :) .* mdl(1) + ts_x(2, :) .* mdl(2) + ts_x(3, :) .* mdl(3) + ts_x(4, :) .* mdl(4) + ts_x(5, :) .* mdl(5) + ts_x(6, :) .* mdl(6) + ts_x(7, :) .* mdl(7);
 
-    if 1
-        figure;
-        screen_size = get(0, 'ScreenSize');
-        set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(lda_pred, 'b');
-        xlabel("Frequency"); ylabel("SSPL");
-        legend('Test', 'Prediction');hold off;
-        print("LDAIt"+i+".png", '-dpng', '-r300')
-    end
 
-    pp     = fitlm(tr_x', tr_y', '');
-
-    p_pred = predict(pp,  ts_x');
-
-    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    disp("RMSE (fitcdiscr):" + MSE(ts_y, r_pred));
 
     if 1
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
-        plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+        plot(ts_y, 'r'); hold on; plot(r_pred, 'b');
         xlabel("Frequency"); ylabel("SSPL");
         legend('Test', 'Prediction');hold off;
-        print("PolyFitIt"+i+".png", '-dpng', '-r300')
+        print("RegressIt"+i+".png", '-dpng', '-r300')
     end
+
+    % pp     = fitlm(tr_x', tr_y', 'quadratic');
+    % 
+    % p_pred = predict(pp,  ts_x');
+    % 
+    % disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    % 
+    % if 1
+    %     figure;
+    %     screen_size = get(0, 'ScreenSize');
+    %     set(gcf, 'Position', screen_size);
+    %     plot(ts_y, 'r'); hold on; plot(p_pred, 'b');
+    %     xlabel("Frequency"); ylabel("SSPL");
+    %     legend('Test', 'Prediction');hold off;
+    %     print("PolyFitIt"+i+".png", '-dpng', '-r300')
+    % end
         
     % ts_unique_chord      = unique(ts_x(3, :));
     % ts_unique_chord_data = [];
