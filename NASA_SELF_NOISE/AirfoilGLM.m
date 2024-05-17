@@ -6,9 +6,45 @@ addpath("./pattern");
 data = readtable("AirfoilSelfNoise.csv");
 
 correlacion = corrcoef(data{:,:});
+figure,
 heatmap(data.Properties.VariableNames,data.Properties.VariableNames,correlacion);
 title('Correlation map of given data');
 print("CorrelationMap0.png", '-dpng', '-r300')
+ CV = 10;
+for i=1:CV
+    [tr_x, ts_x, tr_y, ts_y] = crossval(data{:,1:end-1}', data{:,end}', CV, i);
+
+    %% Lambda pred: 
+    %[X, mu, sigma] = zscore(x);
+    alpha = 0.5;
+    ErrElNet = zeros(1,100);
+    % ElasticNet
+    %[B, FitInfo] = lasso(X, y', 'Alpha', alpha);
+    [B, FitInfo] = lassoglm(tr_x', tr_y','gamma','Alpha',0.5); % 10-fold cross-validation
+    yPred = ts_x' * B; % matriz 150x100
+    for j = 1:size(yPred,2)
+        ErrElNet(j) = MSE(ts_y, yPred(:,j)');
+        disp("RMSE Lasso:"+ ErrElNet(j));
+    end
+    [m,index] = min(ErrElNet);
+
+    figure;
+    screen_size = get(0, 'ScreenSize');
+    set(gcf, 'Position', screen_size);
+    plot(ts_y, 'r'); hold on; plot(yPred', 'b');
+    xlabel("Frequency"); ylabel("SSPL");
+    legend('Test', 'Prediction');
+    print("RegElasticNet"+i+".png", '-dpng', '-r300')
+    % 
+    % A = [ tr_x' ones(size(tr_x, 2), 1)];
+    % 
+    % p = pinv(A) * tr_y';
+    % 
+    % y_pred = [ ts_x' ones(size(ts_x, 2), 1)]*p;
+    % 
+    % disp("RMSE INV original data: " +  MSE(ts_y, y_pred'));
+
+end
 
 %% Labels
 %  Frequency
@@ -65,13 +101,22 @@ for it = 1:size(unique_chord_data, 2)
 end
 
 CV = 10;
-
+%1 = frec 2=angle 3= chord 4= vel 5 =thickness
 x = unique_chord_data(1:5, :);
 pca_transform = pca(unique_chord_data([2 5], :), 1);
 x(6, :) = pca_transform * unique_chord_data([2 5], :);
 x(7, :) = unique_chord_data(7, :);
 y = unique_chord_data(6, :);
 
+
+corr_table = corrcoef([x([1 3 4 5 6 7],:)' y']); %correlacion de los datos contando con la salida
+disp(corr_table);
+%% alpha y delta estan transformados... ver el significado y editar mapa acorde
+figure,
+heatmap(corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
+title('Mapa de correlacion');
+
+ErrInv = zeros(1,CV); ErrInv2 = zeros(1,CV); ErrFitlm = zeros(1,CV); 
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
 
@@ -87,8 +132,8 @@ for i=1:CV
     p = pinv(A) * tr_y';
 
     y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
-
-    disp("RMSE (Our PINV): " +  MSE(ts_y, y_pred));
+    ErrInv(i) = MSE(ts_y, y_pred);
+    disp("RMSE (Our PINV): " + ErrInv(i) );
 
     if 0
         figure;
@@ -108,10 +153,18 @@ for i=1:CV
         print("residualsRegIt"+i+".png", '-dpng', '-r300')
     end
 
-    lda = fitcdiscr( tr_x', tr_y');
-    lda_pred = predict(lda, ts_x')';
+    A2 = [ tr_x' ones(size(tr_x, 2), 1)];
 
-    disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
+    p = pinv(A2) * tr_y';
+
+    y_pred = [ ts_x' ones(size(ts_x, 2), 1)]*p;
+    ErrInv2(i) = MSE(ts_y, y_pred');
+    disp("RMSE INV original data: " +  ErrInv2(i));
+
+    % lda = fitcdiscr( tr_x', tr_y');
+    % lda_pred = predict(lda, ts_x')';
+    % 
+    % disp("RMSE (fitcdiscr):" + MSE(ts_y, lda_pred));
 
     if 0
         figure;
@@ -131,13 +184,17 @@ for i=1:CV
         print("resLDAIt"+i+".png", '-dpng', '-r300')
     end
 
-    pp     = fitlm(tr_x', tr_y', 'quadratic');
+    %pp     = fitlm(tr_x', tr_y', 'quadratic');
 
-    p_pred = predict(pp,  ts_x');
+    %p_pred = predict(pp,  ts_x');
 
-    disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
+    %disp("RMSE (PolyFit): " + MSE(ts_y, p_pred'));
 
-    if 1
+    %prueba fitlm sin alpha 'duplicado'
+    y_fitlmPred = predict(fitlm(tr_x([1 3 4 5 6 7],:)', tr_y', 'quadratic'),  ts_x([1 3 4 5 6 7],:)');
+    ErrFitlm(i) = MSE(ts_y, y_fitlmPred');
+    disp("RMSE (PolyFit) sin alpha: " + ErrFitlm(i));
+    if 0
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -183,6 +240,25 @@ for i=1:CV
     %     end
     % end
 end
+
+[X, mu, sigma] = zscore(X);
+alpha = 0.5;
+
+% ElasticNet
+[B, FitInfo] = lasso(X, y, 'Alpha', alpha);
+[B, FitInfo] = lasso(X, y, 'Alpha', alpha, 'CV', 10); % 10-fold cross-validation
+optimalLambda = FitInfo.LambdaMinMSE;
+optimalCoefficients = B(:, FitInfo.IndexMinMSE);
+yPred = X * optimalCoefficients;
+
+disp("Error medio PseudoInv con St" + mean(ErrInv));
+disp("Error medio PseudoInv con Original data" + mean(ErrInv2));
+disp("Error medio fitlm" + mean(ErrFitlm));
+
+figure,
+plot(ErrInv); hold on;
+plot(ErrInv2); plot(ErrFitlm); hold off;
+xlabel("iteration"); ylabel("Error");
 
 
 
