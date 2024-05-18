@@ -1,13 +1,32 @@
-clear all, close all, clc;
+close all, clc;
 
+%% Libreria, datos y variables entrega
 addpath("./pattern");
-
 data = readtable("AirfoilSelfNoise.csv");
+images_corr = false; %flag para mostrar e imprimir los mapas de correlacion
+images_plot = true; %flag para mostrar e imprimir las gráficas
+CV = 10; %iteraciones Cross Validation
+%Errores de cada entrenamiento (duplicated a ver)
+ErrTree = zeros(1,CV);
+ErrInv = zeros(1,CV); 
+ErrInv2 = zeros(1,CV); 
+ErrFitlm = zeros(1,CV); 
+%% Store errors and their coefficients:
+pinv_error_coefs = cell(1, CV);
+regr_error_coefs = cell(1, CV);
+fitl_error_coefs = cell(1, CV);
 
+
+%% Mapa de Correlacion de los datos originales
+if images_corr
 correlacion = corrcoef(data{:,:});
+figure,
 heatmap(data.Properties.VariableNames,data.Properties.VariableNames,correlacion);
 title('Correlation map of given data');
-print("CorrelationMap0.png", '-dpng', '-r300')
+
+    print("CorrelationMap0.png", '-dpng', '-r300')
+end
+
 
 %% Labels
 %  Frequency
@@ -19,6 +38,7 @@ print("CorrelationMap0.png", '-dpng', '-r300')
 
 x = table2array(data(:, 1:5))';
 d = table2array(data(:, :))';
+
 
 %% Preproccess
 unique_chord      = unique(x(3, :));
@@ -32,7 +52,7 @@ unique_angle    = unique(x(2, :));
 unique_velocity = unique(x(4, :));
 
 %% Poner a 1 si quieres sacar las imagenes y guardarlas
-if 0
+if images_corr
     ShowFigures(unique_chord_data, unique_chord, unique_velocity, unique_angle);
 end
 
@@ -59,44 +79,71 @@ for it = 1:size(unique_chord_data, 2)
     unique_chord_data(7, it) = SPL - 10 .* log10((v_d/100).^5 .* ((f_d .* c_d)/s_d.^2));
 end
 
-CV = 10;
-
+%1 = frec 2=angle 3= chord 4= vel 5 =thickness
 x = unique_chord_data(1:5, :);
 pca_transform = pca(unique_chord_data([2 5], :), 1);
 x(6, :) = pca_transform * unique_chord_data([2 5], :);
 x(7, :) = unique_chord_data(7, :);
 y = unique_chord_data(6, :);
 
-corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
-disp(corr_table);
+%% no se por que hay dos socorro
+if images_corr
+    corr_table = corrcoef([x([1 3 4 5 6 7],:)' y']); %correlacion de los datos contando con la salida
+    disp(corr_table);
+    figure,
+    heatmap(corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
+    title('Mapa Correlacion con SPL Form');
+end
 
-% Create heatmap
-xtitle = {'Freq' 'Angle Attack' 'Chord Length' 'Velocity' 'Section Side Disp' 'Angle SSD Transform' 'SPL Form' 'SSPL'};
-% alpha y delta estan transformados... ver el significado y editar mapa acorde
-heatmap(xtitle,xtitle,corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
-title('Mapa de correlacion');
+if images_corr
+    corr_table = corrcoef([x' y']); %correlacion de los datos contando con la salida
+    disp(corr_table);
+    % Create heatmap
+    xtitle = {'Freq' 'Angle Attack' 'Chord Length' 'Velocity' 'Section Side Disp' 'Angle SSD Transform' 'SPL Form' 'SSPL'};
+    heatmap(xtitle,xtitle,corr_table); %, 'Colormap', 'jet', 'ColorLimits', [-1, 1], 'CellLabelColor', 'none'
+    title('Mapa de correlacion');
+end
 
-%% Store errors and their coefficients:
-pinv_error_coefs = cell(1, CV);
-regr_error_coefs = cell(1, CV);
-fitl_error_coefs = cell(1, CV);
-
+%% CROSS VALIDATION
 for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
-    
+
+    %% REGRESSION TREE
+    %surrogate off + bag 17 ; sur on + bag 16.9
+    %tree = RegressionTree.template('Reproducible',true); %prueba no se de estos params
+    %Mdl = fitrensemble(tr_x',tr_y','OptimizeHyperparameters','auto','Learners',tree);
+    tree = RegressionTree.template('Surrogate','on','MaxNumSplits',1,'MinLeaf',1,'PredictorSelection','interaction-curvature'); %prueba no se de estos params
+    Mdl = fitrensemble(tr_x',tr_y','Method','LSBoost','NumLearningCycles',200);
+    ypTree = predict(Mdl,  ts_x');
+    % parametros como predictorSelector, surrogate o NumCycles > 100
+    % parecen no sonseguir una mejora significariva
+    ErrTree(i) = MSE(ts_y, ypTree');
+    ErrTree;
+    disp("RMSE Reg Tree:"+ ErrTree(i));
+
+    if images_plot
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(ypTree', 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');
+        print("RegTREE"+i+".png", '-dpng', '-r300')
+    end
+
+    %% PseudoInversa 
     A = [ tr_x(7, :)' tr_x(4, :)' tr_x(3, :)' tr_x(1, :)' (tr_x(5, :)') (tr_x(6, :)') (tr_x(2, :)') ones(size(tr_x, 2), 1)];
 
     p = pinv(A) * tr_y';
 
     y_pred = ts_x(7, :) .* p(1) + ts_x(4, :) .* p(2) + ts_x(3, :) .* p(3) + ts_x(1, :) .* p(4) + ts_x(5, :) .* p(5) + ts_x(6, :) .* p(6) + ts_x(2, :) .* p(7) + p(8);
 
+    ErrInv(i) = MSE(ts_y, y_pred);
+    disp("RMSE (Our PINV): " + ErrInv(i) );
+
     pinv_err = MSE(ts_y, y_pred);
 
-    pinv_error_coefs{i} = {pinv_err, p};
-
-    disp("RMSE (Our PINV): " +  pinv_err);
-
-    if 1
+    if images_plot
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -106,6 +153,17 @@ for i=1:CV
         print("RegressionIt"+i+".png", '-dpng', '-r300')
     end
 
+    %% PseudoInversa 2 (la misma solucion)
+    A2 = [ tr_x' ones(size(tr_x, 2), 1)];
+
+    p = pinv(A2) * tr_y';
+
+    y_pred2 = [ ts_x' ones(size(ts_x, 2), 1)]*p;
+
+    ErrInv2(i) = MSE(ts_y, y_pred2');
+    disp("RMSE INV metodo 2: " +  ErrInv2(i));
+
+    %% Funcion Regress matlab
     mdl    = regress(tr_y', tr_x', 0.1);
     r_pred = ts_x(1, :) .* mdl(1) + ts_x(2, :) .* mdl(2) + ts_x(3, :) .* mdl(3) + ts_x(4, :) .* mdl(4) + ts_x(5, :) .* mdl(5) + ts_x(6, :) .* mdl(6) + ts_x(7, :) .* mdl(7);
 
@@ -117,7 +175,7 @@ for i=1:CV
 
     disp("RMSE (Regress):" + regress_err);
 
-    if 1
+    if images_plot
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -126,7 +184,7 @@ for i=1:CV
         legend('Test', 'Prediction');hold off;
         print("RegressIt"+i+".png", '-dpng', '-r300')
     end
-      
+
     pp     = fitlm(tr_x', tr_y', 'quadratic');
 
     p_pred = predict(pp,  ts_x');
@@ -137,7 +195,11 @@ for i=1:CV
 
     disp("RMSE (PolyFit): " + fitlm_err);
 
-    if 1
+    %prueba fitlm sin alpha 'duplicado'
+    y_fitlmPred = predict(fitlm(tr_x([1 3 4 5 6 7],:)', tr_y', 'quadratic'),  ts_x([1 3 4 5 6 7],:)');
+    ErrFitlm(i) = MSE(ts_y, y_fitlmPred');
+    disp("RMSE (PolyFit) sin alpha: " + ErrFitlm(i));
+    if images_plot
         figure;
         screen_size = get(0, 'ScreenSize');
         set(gcf, 'Position', screen_size);
@@ -154,34 +216,48 @@ for i=1:CV
         legend('residuals');hold off;
         print("resfitlmIt"+i+".png", '-dpng', '-r300')
     end
-        
-    % ts_unique_chord      = unique(ts_x(3, :));
-    % ts_unique_chord_data = [];
-    % ts_unique_chord = sort(ts_unique_chord);
-    % ts_data = ts_x;
-    % ts_data(7, :) = ts_y;
-    % for chord = ts_unique_chord
-    %     ts_unique_chord_data = [ts_unique_chord_data ts_data(:, ts_data(3, :) == chord) ];
-    % end
-    % 
-    % ts_unique_angle    = unique(ts_x(2, :));
-    % ts_unique_velocity = unique(ts_x(4, :));
-    % for chord = ts_unique_chord
-    %     for v = ts_unique_velocity
-    %         for a = ts_unique_angle
-    %             values = ts_unique_chord_data(:, ts_unique_chord_data(3, :) == chord);
-    %             values = values(:, values(4, :) == v);
-    %             values = values(:, values(2, :) == a);
-    %             if ~isempty(values)
-    %                 y_d    = values(7, :);
-    %                 y_pred = values(6, :).^5 .* p(1) + values(4, :).^4 .* p(2) + values(3, :) .^ 3 .* p(3) + values(5, :).^2  .* p(4) + values(1, :) .* p(5) + p(6);
-    %                 figure, plot(y_d, 'r'); hold on; plot(y_pred, 'b');
-    %                 xlabel("Frequency"); ylabel("SSPL");
-    %                 legend('Test', 'Prediction');hold off;
-    %             end
-    %         end
-    %     end
-    % end
+
 end
+
+
+%%  AQUI MOSTRAR RESULTADOS DE RMSE MEDIO ABSOLUTO RELATIVO, GRAFICAS...
+%disp("RMSE suma TRee: " +  ErrTotalTree);
 figure,
-plot(Er_rel*100); xlabel("iteration"); ylabel("Error relativo");
+plot(ErrTree);
+xlabel("iteration"); ylabel("Error Reg Tree"); hold on;
+plot(ErrInv2);
+plot(ErrFitlm);
+
+
+%% ELASTIC NET ¿SE DEJA?
+for i=1:CV
+    [tr_x, ts_x, tr_y, ts_y] = crossval(data{:,1:end-1}', data{:,end}', CV, i);
+
+    if 0
+
+       %% Lambda pred: 
+        %[X, mu, sigma] = zscore(x);
+        alpha = 0.5;
+    
+        ErrElNet = zeros(1,100);
+        % ElasticNet
+        %[B, FitInfo] = lasso(X, y', 'Alpha', alpha);
+        [B, FitInfo] = lassoglm(tr_x', tr_y','gamma','Alpha',0.5); % 10-fold cross-validation
+        yPred = ts_x' * B; % matriz 150x100
+        for j = 1:size(yPred,2)
+            ErrElNet(j) = MSE(ts_y, yPred(:,j)');
+            disp("RMSE Lasso:"+ ErrElNet(j));
+        end
+        [m,index] = min(ErrElNet);
+        figure;
+        screen_size = get(0, 'ScreenSize');
+        set(gcf, 'Position', screen_size);
+        plot(ts_y, 'r'); hold on; plot(yPred', 'b');
+        xlabel("Frequency"); ylabel("SSPL");
+        legend('Test', 'Prediction');
+        print("RegElasticNet"+i+".png", '-dpng', '-r300')
+    end
+
+end
+
+
