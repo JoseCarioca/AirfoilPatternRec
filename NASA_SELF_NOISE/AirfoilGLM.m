@@ -1,10 +1,10 @@
-clear all, close all, clc;
+close all, clc;
 
 %% Libreria, datos y variables entrega
 addpath("./pattern");
 data = readtable("AirfoilSelfNoise.csv");
 images_corr = false; %flag para mostrar e imprimir los mapas de correlacion
-images_plot = false; %flag para mostrar e imprimir las gráficas
+images_plot = true; %flag para mostrar e imprimir las gráficas
 CV = 10; %iteraciones Cross Validation
 %Errores de cada entrenamiento (duplicated a ver)
 ErrTree = zeros(1,CV);
@@ -18,11 +18,12 @@ fitl_error_coefs = cell(1, CV);
 
 
 %% Mapa de Correlacion de los datos originales
+if images_corr
 correlacion = corrcoef(data{:,:});
 figure,
 heatmap(data.Properties.VariableNames,data.Properties.VariableNames,correlacion);
 title('Correlation map of given data');
-if images_corr
+
     print("CorrelationMap0.png", '-dpng', '-r300')
 end
 
@@ -51,7 +52,7 @@ unique_angle    = unique(x(2, :));
 unique_velocity = unique(x(4, :));
 
 %% Poner a 1 si quieres sacar las imagenes y guardarlas
-if images
+if images_corr
     ShowFigures(unique_chord_data, unique_chord, unique_velocity, unique_angle);
 end
 
@@ -109,8 +110,10 @@ for i=1:CV
 
     %% REGRESSION TREE
     %surrogate off + bag 17 ; sur on + bag 16.9
+    %tree = RegressionTree.template('Reproducible',true); %prueba no se de estos params
+    %Mdl = fitrensemble(tr_x',tr_y','OptimizeHyperparameters','auto','Learners',tree);
     tree = RegressionTree.template('Surrogate','on','MaxNumSplits',1,'MinLeaf',1,'PredictorSelection','interaction-curvature'); %prueba no se de estos params
-    Mdl = fitrensemble(tr_x',tr_y','Method','Bag','NumLearningCycles',100);
+    Mdl = fitrensemble(tr_x',tr_y','Method','LSBoost','NumLearningCycles',200);
     ypTree = predict(Mdl,  ts_x');
     % parametros como predictorSelector, surrogate o NumCycles > 100
     % parecen no sonseguir una mejora significariva
@@ -139,10 +142,6 @@ for i=1:CV
     disp("RMSE (Our PINV): " + ErrInv(i) );
 
     pinv_err = MSE(ts_y, y_pred);
-
-    pinv_error_coefs{i} = {pinv_err, p};
-
-    disp("RMSE (Our PINV): " +  pinv_err);
 
     if images_plot
         figure;
@@ -222,9 +221,12 @@ end
 
 
 %%  AQUI MOSTRAR RESULTADOS DE RMSE MEDIO ABSOLUTO RELATIVO, GRAFICAS...
-disp("RMSE suma TRee: " +  ErrTotalTree);
-%figure,
-%plot(Er_rel*100); xlabel("iteration"); ylabel("Error relativo");
+%disp("RMSE suma TRee: " +  ErrTotalTree);
+figure,
+plot(ErrTree);
+xlabel("iteration"); ylabel("Error Reg Tree"); hold on;
+plot(ErrInv2);
+plot(ErrFitlm);
 
 
 %% ELASTIC NET ¿SE DEJA?
