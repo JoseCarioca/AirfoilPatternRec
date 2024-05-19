@@ -1,4 +1,5 @@
 function [error] = MSE(y, yest)
-    error = sqrt(sum(abs(y - yest)) / length(yest));
+    %% Absolute minimum error
+    error = sum(abs(y - yest)) / length(yest);
 end
 
