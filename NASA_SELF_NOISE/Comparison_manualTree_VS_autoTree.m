@@ -61,8 +61,7 @@ for i=1:CV
     [tr_x, ts_x, tr_y, ts_y] = crossval(x, y, CV, i);
 
     %% manual vs auto tree
-    %surrogate off + bag 17 ; sur on + bag 16.9
-    tree = RegressionTree.template('Reproducible',true); %prueba no se de estos params
+    tree = RegressionTree.template('Reproducible',true);
     Mdl = fitrensemble(tr_x',tr_y','OptimizeHyperparameters','auto','Learners',tree);
     tree2 = RegressionTree.template('Surrogate','on','MaxNumSplits',1,'MinLeaf',1,'PredictorSelection','interaction-curvature'); %prueba no se de estos params
     Mdl2 = fitrensemble(tr_x',tr_y','Method','Bag','NumLearningCycles',100);
@@ -71,10 +70,18 @@ for i=1:CV
     % parecen no sonseguir una mejora significariva
     ErrTree(i) = MSE(ts_y, ypTree');
     disp("Reg Tree Auto:"+ ErrTree(i));
+   
+    
+    media = mean(ts_y);
+    ypTreeManual = predict(Mdl2,  ts_x');
+    rsquaredTree(i) = 1- sum((ts_y - ypTreeManual').^2 ) / sum((ts_y-media).^2);
 
-    ErrTreeManual(i) = MSE(ts_y, predict(Mdl2,  ts_x')');
+    ErrTreeManual(i) = MSE(ts_y, ypTreeManual');
     disp("Manual Reg Tree:"+ ErrTree(i));
 end
+
+disp(rsquaredTree);
+
 figure,
 plot(ErrTree);
 xlabel("iteration"); ylabel("Erro"); hold on;
